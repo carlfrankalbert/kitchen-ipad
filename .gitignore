@@ -1,0 +1,11 @@
+# Xcode
+*.xcuserstate
+xcuserdata/
+*.xcscheme
+!*.xcscheme
+DerivedData/
+.DS_Store
+*.swp
+
+# Claude worktrees
+.claude/
