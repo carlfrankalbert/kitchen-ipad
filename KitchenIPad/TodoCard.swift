@@ -19,6 +19,7 @@ struct TodoCard: View {
                         .padding(.vertical, 2)
                         .background(Theme.green, in: Capsule())
                 }
+                RemindersRefreshButton(remStore: remStore)
                 Spacer()
             }
             .padding(.horizontal, Theme.pad)
@@ -55,6 +56,7 @@ struct TodoCard: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task { await remStore.requestAccess() }
+        .remindersAutoRefresh(every: 45, remStore: remStore)
     }
 
     @ViewBuilder

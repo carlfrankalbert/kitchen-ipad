@@ -95,25 +95,28 @@ private struct WeatherContent: View {
                 if let hl = todayHighLow {
                     VStack(alignment: .trailing, spacing: 3) {
                         Text("↑ \(hl.high)°")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Theme.text)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Theme.infoBlue)
                         Text("↓ \(hl.low)°")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Theme.muted)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Theme.infoBlue.opacity(0.78))
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Theme.infoBlueSoft.opacity(0.7), in: Capsule())
                 }
             }
             .padding(.horizontal, Theme.pad)
-            .padding(.top, Theme.pad)
-            .padding(.bottom, 8)
+            .padding(.top, 10)
+            .padding(.bottom, 4)
 
             // Condition + wind sentence
             Text(conditionSentence)
-                .font(.system(size: 13))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(stale ? Theme.dimmed : Theme.muted)
                 .lineLimit(2)
                 .padding(.horizontal, Theme.pad)
-                .padding(.bottom, 12)
+                .padding(.bottom, 8)
 
             HLine()
 
@@ -121,15 +124,15 @@ private struct WeatherContent: View {
             if !clothing.isEmpty {
                 Text("ANTREKK").label()
                     .padding(.horizontal, Theme.pad)
-                    .padding(.top, 10)
-                    .padding(.bottom, 8)
+                    .padding(.top, 6)
+                    .padding(.bottom, 6)
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(clothing) { item in
                             HStack(spacing: 5) {
                                 Text(item.emoji)
-                                    .font(.system(size: 16))
+                                    .font(.system(size: 28))
                                 Text(item.label)
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(Theme.text)
@@ -141,7 +144,7 @@ private struct WeatherContent: View {
                     }
                     .padding(.horizontal, Theme.pad)
                 }
-                .padding(.bottom, Theme.pad)
+                .padding(.bottom, 8)
             }
         }
     }

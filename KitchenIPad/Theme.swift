@@ -7,6 +7,8 @@ enum Theme {
     static let muted   = Color(hex: 0x78716C)   // warm gray
     static let dimmed  = Color(hex: 0xA8A29E)   // light warm gray
     static let accent  = Color(hex: 0xC2410C)   // today orange
+    static let infoBlue = Color(hex: 0x0B5CAD)
+    static let infoBlueSoft = Color(hex: 0xDCEBFA)
     static let green   = Color(hex: 0x15803D)
     static let red     = Color(hex: 0xDC2626)
     static let divider = Color(hex: 0xB5AE9E)   // subtle divider line

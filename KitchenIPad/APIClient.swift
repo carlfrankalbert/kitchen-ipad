@@ -8,8 +8,10 @@ final class APIClient {
 
     var weather:       WeatherResponse?
     var transport:     TransportResponse?
+    var postalDelivery: PostalDeliveryResponse?
     var weatherStale   = false
     var transportStale = false
+    var postalDeliveryStale = false
 
     private var gaustadStopId: String? = nil
 
@@ -58,6 +60,21 @@ final class APIClient {
             transportStale = false
         } catch {
             transportStale = true
+        }
+    }
+
+    // MARK: - Postal delivery via Posten (no auth)
+
+    func fetchPostalDelivery(postalCode: String = "0373") async {
+        let url = URL(
+            string: "https://www.posten.no/levering-av-post/_/service/no.posten.website/delivery-days?postalCode=\(postalCode)"
+        )!
+        do {
+            let (data, _) = try await session.data(from: url)
+            postalDelivery = try JSONDecoder().decode(PostalDeliveryResponse.self, from: data)
+            postalDeliveryStale = false
+        } catch {
+            postalDeliveryStale = true
         }
     }
 

@@ -57,6 +57,28 @@ struct Departure: Codable, Identifiable {
     }
 }
 
+// MARK: - Postal delivery (Posten)
+
+struct PostalDeliveryResponse: Codable {
+    let deliveryDatesRaw: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case deliveryDatesRaw = "delivery_dates"
+    }
+
+    var deliveryDates: [Date] {
+        deliveryDatesRaw.compactMap { Self.dateFormatter.date(from: $0) }
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(identifier: "Europe/Oslo")
+        df.dateFormat = "yyyy-MM-dd"
+        return df
+    }()
+}
+
 // MARK: - Local meal plan (stored on device)
 
 struct LocalMeal: Codable, Identifiable {

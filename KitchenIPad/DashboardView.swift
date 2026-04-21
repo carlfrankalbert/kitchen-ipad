@@ -15,51 +15,63 @@ struct DashboardView: View {
                     HLine()
 
                     // ── Main content ────────────────────────────────────
-                    HStack(alignment: .top, spacing: 0) {
+                    VStack(spacing: 0) {
+                        // Calendar stays full width for better readability
+                        CalendarCard()
+                            .frame(height: calendarHeight(geo))
 
-                        // LEFT: calendar (week grid + today events) + lists
-                        VStack(spacing: 0) {
-                            CalendarCard()
-                                .frame(maxHeight: .infinity)
+                        HLine()
 
-                            HLine()
+                        // Right side is dedicated to menu down to footer.
+                        HStack(alignment: .top, spacing: 0) {
+                            VStack(spacing: 0) {
+                                WeatherCard(api: api)
+                                    .frame(height: weatherHeight(geo), alignment: .topLeading)
 
-                            // Shopping + Todo under calendar
-                            HStack(alignment: .top, spacing: 0) {
-                                ShoppingCard()
-                                    .frame(maxWidth: .infinity)
-                                VLine()
-                                TodoCard()
-                                    .frame(maxWidth: .infinity)
+                                Spacer(minLength: 0)
+                                HLine()
+
+                                HStack(alignment: .top, spacing: 0) {
+                                    ShoppingCard()
+                                        .frame(maxWidth: .infinity)
+                                    VLine()
+                                    TodoCard()
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .frame(height: quickListsHeight(geo))
                             }
-                            .frame(height: listsHeight(geo))
-                        }
-                        .frame(width: leftWidth(geo))
+                            .frame(width: leftColumnWidth(geo), alignment: .topLeading)
+                            .frame(maxHeight: .infinity, alignment: .topLeading)
 
-                        VLine()
+                            VLine()
 
-                        // RIGHT: bigger weather + meal plan (fills to footer)
-                        VStack(spacing: 0) {
-                            WeatherCard(api: api)
-                            HLine()
                             MealPlanCard()
-                                .frame(maxHeight: .infinity)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         }
-                        .frame(maxWidth: .infinity)
+                        .frame(maxHeight: .infinity)
                     }
                     .frame(maxHeight: .infinity)
 
                     HLine()
 
                     // ── Footer info strip ───────────────────────────────
-                    FooterStrip(weather: api.weather, nowPlaying: nowPlaying)
+                    FooterStrip(
+                        weather: api.weather,
+                        postalDelivery: api.postalDelivery,
+                        postalDeliveryStale: api.postalDeliveryStale,
+                        nowPlaying: nowPlaying
+                    )
                 }
             }
         }
         .ignoresSafeArea()
         .persistentSystemOverlays(.hidden)
         .statusBarHidden(true)
-        .task { await api.fetchWeather(); await api.fetchTransport() }
+        .task {
+            await api.fetchWeather()
+            await api.fetchTransport()
+            await api.fetchPostalDelivery()
+        }
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(600))
@@ -72,15 +84,29 @@ struct DashboardView: View {
                 await api.fetchTransport()
             }
         }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(21600))
+                await api.fetchPostalDelivery()
+            }
+        }
         .onAppear { nowPlaying.startObserving() }
     }
 
-    private func leftWidth(_ geo: GeometryProxy) -> CGFloat {
-        geo.size.width * 0.58
+    private func calendarHeight(_ geo: GeometryProxy) -> CGFloat {
+        max(200, geo.size.height * 0.145)
     }
 
-    private func listsHeight(_ geo: GeometryProxy) -> CGFloat {
-        geo.size.height * 0.24
+    private func weatherHeight(_ geo: GeometryProxy) -> CGFloat {
+        max(170, geo.size.height * 0.15)
+    }
+
+    private func leftColumnWidth(_ geo: GeometryProxy) -> CGFloat {
+        geo.size.width * 0.35
+    }
+
+    private func quickListsHeight(_ geo: GeometryProxy) -> CGFloat {
+        max(150, geo.size.height * 0.14)
     }
 }
 
@@ -88,6 +114,8 @@ struct DashboardView: View {
 
 private struct FooterStrip: View {
     let weather:    WeatherResponse?
+    let postalDelivery: PostalDeliveryResponse?
+    let postalDeliveryStale: Bool
     let nowPlaying: NowPlayingStore
 
     @State private var now = Date()
@@ -102,17 +130,27 @@ private struct FooterStrip: View {
         return "\(df.string(from: rise)) – \(df.string(from: set))  ·  \(dayLengthText(rise: rise, set: set))"
     }
 
-    private var updateTime: String {
+    private var postText: String {
+        guard let dates = postalDelivery?.deliveryDates, !dates.isEmpty else {
+            return postalDeliveryStale ? "Kunne ikke oppdatere" : "Laster…"
+        }
+
         let df = DateFormatter()
-        df.dateFormat = "HH:mm"
-        return df.string(from: now)
+        df.locale = Locale(identifier: "nb_NO")
+        df.dateFormat = "EEE d. MMM"
+
+        let labels = dates.prefix(3).map { date -> String in
+            if Calendar.current.isDateInToday(date) { return "I dag" }
+            if Calendar.current.isDateInTomorrow(date) { return "I morgen" }
+            return df.string(from: date)
+        }
+
+        return labels.joined(separator: "  ·  ")
     }
 
     var body: some View {
         HStack(spacing: 0) {
-            FooterCell(label: "SØPPELTØMMING", value: "Tirsdag 28. april  ·  Restavfall")
-            footerDivider
-            FooterCell(label: "PAPIR", value: "Fredag 9. mai  ·  Papp og papir")
+            FooterCell(label: "POST", value: postText)
             footerDivider
             FooterCell(label: "SOL", value: sunText)
             footerDivider
@@ -123,14 +161,8 @@ private struct FooterStrip: View {
                 footerDivider
                 NowPlayingCell(nowPlaying: nowPlaying)
             }
-
-            Spacer()
-
-            Text("Oppdatert \(updateTime)")
-                .font(.system(size: 9))
-                .foregroundStyle(Theme.dimmed)
-                .padding(.trailing, Theme.hpad)
         }
+        .frame(maxWidth: .infinity)
         .padding(.vertical, 9)
         .onReceive(timer) { now = $0 }
     }
@@ -147,14 +179,15 @@ private struct FooterCell: View {
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .center, spacing: 2) {
             Text(label).label()
             Text(value)
                 .font(.system(size: 11))
                 .foregroundStyle(Theme.text)
                 .lineLimit(1)
         }
-        .padding(.leading, Theme.hpad)
+        .frame(maxWidth: .infinity)
+        .multilineTextAlignment(.center)
     }
 }
 

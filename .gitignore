@@ -4,6 +4,7 @@ xcuserdata/
 *.xcscheme
 !*.xcscheme
 DerivedData/
+.derivedData_local/
 .DS_Store
 *.swp
 

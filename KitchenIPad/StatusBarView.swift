@@ -25,16 +25,15 @@ struct StatusBarView: View {
             // Left: weekday + date + Norwegian year
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(weekdayName)
-                    .font(.system(size: 10, weight: .semibold))
-                    .kerning(1.5)
-                    .foregroundStyle(Theme.muted)
-
-                Text(dateString)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundStyle(Theme.text)
 
-                Text("·  uke \(weekNum)")
-                    .font(.system(size: 12))
+                Text(dateString)
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.text)
+
+                Text("uke \(weekNum)")
+                    .font(.system(size: 17, weight: .medium, design: .rounded))
                     .foregroundStyle(Theme.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -87,19 +86,19 @@ private struct BothDirections: View {
                 ForEach(Array(departures.enumerated()), id: \.offset) { idx, dep in
                     HStack(spacing: 5) {
                         Text(dep.line)
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
                             .background(Theme.lineColor(for: dep.line), in: RoundedRectangle(cornerRadius: 3))
 
                         Text(dep.destination)
-                            .font(.system(size: 12))
+                            .font(.system(size: 14))
                             .foregroundStyle(stale ? Theme.dimmed : Theme.muted)
                             .lineLimit(1)
 
                         Text(dep.minutesText)
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(stale ? Theme.dimmed : Theme.text)
                             .monospacedDigit()
                     }

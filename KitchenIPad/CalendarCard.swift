@@ -49,12 +49,6 @@ struct CalendarCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header — label only, week number is already in the status bar
-            Text("KALENDER").label()
-                .padding(.horizontal, Theme.pad)
-                .padding(.top, Theme.pad)
-                .padding(.bottom, 10)
-
             if calStore.denied {
                 Text("Ingen kalendertilgang")
                     .font(.system(size: 12))
@@ -68,9 +62,6 @@ struct CalendarCard: View {
             } else {
                 // Week grid — shows event titles in each day column
                 weekGrid
-                HLine()
-                // Upcoming events list
-                eventList
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -92,43 +83,14 @@ struct CalendarCard: View {
                 if idx < weekDays.count - 1 {
                     Theme.divider
                         .frame(width: 0.5)
-                        .frame(maxHeight: .infinity)
+                        .frame(height: 156)
                 }
             }
         }
-        .padding(.bottom, 10)
+        .frame(height: 170, alignment: .top)
+        .padding(.top, 2)
+        .padding(.bottom, 6)
         .padding(.horizontal, 2)
-    }
-
-    // MARK: - Event list (today only)
-
-    private var eventList: some View {
-        let cal = Calendar.current
-        let todayEvents = calStore.events.filter {
-            cal.isDateInToday($0.startDate) || ($0.isAllDay && cal.isDateInToday($0.startDate))
-        }
-
-        return VStack(alignment: .leading, spacing: 0) {
-            Text("I DAG").label()
-                .padding(.horizontal, Theme.pad)
-                .padding(.top, 12)
-                .padding(.bottom, 6)
-
-            if todayEvents.isEmpty {
-                Text("Ingen hendelser i dag")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.dimmed)
-                    .padding(.horizontal, Theme.pad)
-                    .padding(.bottom, 10)
-            } else {
-                ForEach(todayEvents, id: \.eventIdentifier) { event in
-                    EventRow(event: event)
-                    if event.eventIdentifier != todayEvents.last?.eventIdentifier {
-                        HLine().padding(.leading, Theme.pad + 24)
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - Helpers
@@ -170,92 +132,53 @@ private struct WeekDayColumn: View {
             // Day header
             VStack(alignment: .center, spacing: 3) {
                 Text(dayLetter)
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .kerning(1)
-                    .foregroundStyle(isToday ? Theme.accent : (isPast ? Theme.dimmed : Theme.muted))
+                    .foregroundStyle(isToday ? Theme.infoBlue : (isPast ? Theme.dimmed : Theme.muted))
 
                 ZStack {
                     if isToday {
                         Circle()
-                            .fill(Theme.accent)
-                            .frame(width: 24, height: 24)
+                            .fill(Theme.infoBlue)
+                            .frame(width: 34, height: 34)
                     }
                     Text(dayNum)
-                        .font(.system(size: 13, weight: isToday ? .bold : .regular))
+                        .font(.system(size: isToday ? 19 : 16, weight: isToday ? .bold : .regular))
                         .foregroundStyle(isToday ? Color.white : (isPast ? Theme.dimmed : Theme.text))
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(.top, 2)
+            .padding(.bottom, 5)
 
             // Event titles
             VStack(alignment: .leading, spacing: 2) {
-                ForEach(events.prefix(4), id: \.eventIdentifier) { event in
+                ForEach(events.prefix(3), id: \.eventIdentifier) { event in
                     HStack(spacing: 3) {
                         Rectangle()
                             .fill(calColor(event))
-                            .frame(width: 2, height: 10)
+                            .frame(width: 3, height: 12)
                         Text(event.title ?? "")
-                            .font(.system(size: 10))
-                            .foregroundStyle(isPast ? Theme.dimmed : Theme.text)
-                            .lineLimit(1)
+                            .font(.system(size: 13, weight: isToday ? .medium : .regular))
+                            .foregroundStyle(
+                                isPast ? Theme.dimmed : (isToday ? Theme.infoBlue : Theme.text)
+                            )
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
             .padding(.horizontal, 5)
-            .padding(.bottom, 8)
+            .padding(.bottom, 6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func calColor(_ event: EKEvent) -> Color {
         guard let components = event.calendar.cgColor?.components, components.count >= 3 else {
-            return Theme.accent
+            return Theme.infoBlue
         }
         return Color(red: components[0], green: components[1], blue: components[2])
     }
 }
-
-// MARK: - Event row
-
-private struct EventRow: View {
-    let event: EKEvent
-
-    private var calColor: Color {
-        guard let components = event.calendar.cgColor?.components, components.count >= 3 else {
-            return Theme.accent
-        }
-        return Color(red: components[0], green: components[1], blue: components[2])
-    }
-
-    private var timeText: String {
-        if event.isAllDay { return "hele dagen" }
-        let df = DateFormatter()
-        df.dateFormat = "HH:mm"
-        df.timeZone = .current
-        return df.string(from: event.startDate)
-    }
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Rectangle()
-                .fill(calColor)
-                .frame(width: 2, height: 28)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(event.title ?? "")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(1)
-                Text(timeText)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.muted)
-            }
-
-            Spacer()
-        }
-        .padding(.vertical, 7)
-        .padding(.horizontal, Theme.pad)
-    }
-}
-

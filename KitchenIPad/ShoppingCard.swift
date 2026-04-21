@@ -1,5 +1,6 @@
 import SwiftUI
 import EventKit
+import UIKit
 
 // MARK: - Reminders store (shared between shopping + todo)
 
@@ -10,12 +11,30 @@ final class RemindersStore {
     var authorized   = false
     var denied       = false
     var listNotFound = false
-    let listName:    String
+    var isRefreshing = false
+    var dataVersion  = 0
+    var listName: String { resolvedListName ?? listNames.first ?? "" }
 
     private let store = EKEventStore()
+    private let listNames: [String]
+    private let normalizedListNames: [String]
+    private var resolvedListName: String?
+    private var resolvedCalendarIdentifier: String?
+    private var itemsSignature: Int?
+    private var storeChangedObserver: NSObjectProtocol?
+    private var foregroundObserver: NSObjectProtocol?
+    private var refreshTask: Task<Void, Never>?
 
     init(listName: String) {
-        self.listName = listName
+        let names = [listName]
+        self.listNames = names
+        self.normalizedListNames = names.map(Self.normalizedListName)
+    }
+
+    init(listNames: [String]) {
+        let names = listNames.isEmpty ? [""] : listNames
+        self.listNames = names
+        self.normalizedListNames = names.map(Self.normalizedListName)
     }
 
     func requestAccess() async {
@@ -23,25 +42,40 @@ final class RemindersStore {
             let granted = try await store.requestFullAccessToReminders()
             authorized = granted
             denied = !granted
-            if granted { await fetch() }
+            if granted {
+                startObservingChangesIfNeeded()
+                await refreshNow()
+            }
         } catch {
             denied = true
         }
     }
 
+    func refreshNow() async {
+        guard authorized else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
+        await fetch()
+    }
+
     func fetch() async {
         guard let cal = reminderCalendar() else {
             listNotFound = true
+            resolvedListName = nil
+            resolvedCalendarIdentifier = nil
+            applyItems([])
             return
         }
         listNotFound = false
+        resolvedListName = cal.title
+        resolvedCalendarIdentifier = cal.calendarIdentifier
         let pred = store.predicateForIncompleteReminders(
             withDueDateStarting: nil, ending: nil, calendars: [cal]
         )
         await withCheckedContinuation { cont in
             store.fetchReminders(matching: pred) { [weak self] fetched in
                 Task { @MainActor in
-                    self?.items = fetched ?? []
+                    self?.applyItems(fetched ?? [])
                     cont.resume()
                 }
             }
@@ -55,7 +89,8 @@ final class RemindersStore {
     func complete(_ reminder: EKReminder) {
         reminder.isCompleted = true
         try? store.save(reminder, commit: true)
-        items.removeAll { $0.calendarItemIdentifier == reminder.calendarItemIdentifier }
+        applyItems(items.filter { $0.calendarItemIdentifier != reminder.calendarItemIdentifier })
+        scheduleRefresh()
     }
 
     func add(title: String) {
@@ -64,16 +99,144 @@ final class RemindersStore {
         reminder.title    = title
         reminder.calendar = cal
         try? store.save(reminder, commit: true)
-        items.append(reminder)
+        var updated = items
+        updated.append(reminder)
+        applyItems(updated)
+        scheduleRefresh()
     }
 
     func delete(_ reminder: EKReminder) {
         try? store.remove(reminder, commit: true)
-        items.removeAll { $0.calendarItemIdentifier == reminder.calendarItemIdentifier }
+        applyItems(items.filter { $0.calendarItemIdentifier != reminder.calendarItemIdentifier })
+        scheduleRefresh()
     }
 
     private func reminderCalendar() -> EKCalendar? {
-        store.calendars(for: .reminder).first { $0.title == listName }
+        if let id = resolvedCalendarIdentifier,
+           let cached = store.calendar(withIdentifier: id) {
+            return cached
+        }
+
+        let calendars = store.calendars(for: .reminder)
+        let normalizedCalendars = calendars.map { ($0, Self.normalizedListName($0.title)) }
+
+        if let exact = normalizedCalendars.first(where: { normalizedListNames.contains($0.1) })?.0 {
+            return exact
+        }
+
+        // Fallback: tolerate prefixes/suffixes (e.g. emoji or extra context in title)
+        if let fuzzy = normalizedCalendars.first(where: { title in
+            normalizedListNames.contains(where: { wanted in
+                title.1.contains(wanted) || wanted.contains(title.1)
+            })
+        })?.0 {
+            return fuzzy
+        }
+
+        return nil
+    }
+
+    private func startObservingChangesIfNeeded() {
+        guard storeChangedObserver == nil else { return }
+
+        storeChangedObserver = NotificationCenter.default.addObserver(
+            forName: .EKEventStoreChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.scheduleRefresh()
+            }
+        }
+
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.scheduleRefresh()
+            }
+        }
+    }
+
+    private func scheduleRefresh() {
+        guard authorized else { return }
+        refreshTask?.cancel()
+        refreshTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard let self else { return }
+            await self.refreshNow()
+        }
+    }
+
+    private func applyItems(_ newItems: [EKReminder]) {
+        let newSignature = Self.signature(for: newItems)
+        let changed = (itemsSignature != newSignature)
+        items = newItems
+        if changed {
+            itemsSignature = newSignature
+            dataVersion &+= 1
+        }
+    }
+
+    private static func signature(for reminders: [EKReminder]) -> Int {
+        var hasher = Hasher()
+        hasher.combine(reminders.count)
+        for reminder in reminders {
+            hasher.combine(reminder.calendarItemIdentifier)
+            hasher.combine(reminder.title ?? "")
+            let c = reminder.dueDateComponents
+            hasher.combine(c?.calendar?.identifier)
+            hasher.combine(c?.era)
+            hasher.combine(c?.year)
+            hasher.combine(c?.month)
+            hasher.combine(c?.day)
+            hasher.combine(c?.hour)
+            hasher.combine(c?.minute)
+            hasher.combine(c?.second)
+        }
+        return hasher.finalize()
+    }
+
+    private static func normalizedListName(_ text: String) -> String {
+        text
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+    }
+}
+
+struct RemindersRefreshButton: View {
+    let remStore: RemindersStore
+
+    var body: some View {
+        Button {
+            Task { await remStore.refreshNow() }
+        } label: {
+            if remStore.isRefreshing {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Theme.muted)
+        .disabled(!remStore.authorized || remStore.isRefreshing)
+        .padding(.leading, 6)
+    }
+}
+
+extension View {
+    func remindersAutoRefresh(every seconds: Double, remStore: RemindersStore) -> some View {
+        task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(seconds))
+                await remStore.refreshNow()
+            }
+        }
     }
 }
 
@@ -97,6 +260,7 @@ struct ShoppingCard: View {
                         .padding(.vertical, 2)
                         .background(Theme.accent, in: Capsule())
                 }
+                RemindersRefreshButton(remStore: remStore)
                 Spacer()
             }
             .padding(.horizontal, Theme.pad)
@@ -133,6 +297,7 @@ struct ShoppingCard: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task { await remStore.requestAccess() }
+        .remindersAutoRefresh(every: 45, remStore: remStore)
     }
 
     @ViewBuilder
