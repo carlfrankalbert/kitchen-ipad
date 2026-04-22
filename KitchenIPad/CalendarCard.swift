@@ -25,8 +25,11 @@ final class CalendarStore {
 
     func fetch() async {
         let cal = Calendar.current
-        let start = cal.startOfDay(for: Date())
-        let end = cal.date(byAdding: .day, value: 14, to: start)!
+        let today = cal.startOfDay(for: Date())
+        let weekday = cal.component(.weekday, from: today)
+        let fromMon = (weekday + 5) % 7
+        let start = cal.date(byAdding: .day, value: -fromMon, to: today)!
+        let end = cal.date(byAdding: .day, value: 21, to: today)!
         let pred = store.predicateForEvents(withStart: start, end: end, calendars: nil)
         let fetched = store.events(matching: pred)
         events = fetched.sorted { $0.startDate < $1.startDate }
@@ -42,7 +45,7 @@ struct CalendarCard: View {
 
     @Environment(\.scenePhase) private var scenePhase
     private let dayTick = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
-    private let rowSpacing: CGFloat = 6
+    private let rowSpacing: CGFloat = 10
     private let rowTopPadding: CGFloat = 12
     private let rowBottomPadding: CGFloat = 10
 
@@ -58,12 +61,14 @@ struct CalendarCard: View {
     private var weekPlanRows: [WeekPlanRowModel] {
         let today = Calendar.current.startOfDay(for: now)
         return weekDays.map { day in
-            WeekPlanRowModel(
+            let hints = eventHints(for: day)
+            return WeekPlanRowModel(
                 date: day,
                 weekday: shortWeekday(for: day),
                 dayNumber: dayNumber(for: day),
                 dinner: mealFor(date: day),
-                eventHint: eventHint(for: day),
+                events: hints.visible,
+                extraEventCount: hints.extra,
                 isToday: Calendar.current.isDate(day, inSameDayAs: now),
                 isPast: day < today
             )
@@ -123,7 +128,7 @@ struct CalendarCard: View {
             VStack(alignment: .leading, spacing: rowSpacing) {
                 ForEach(weekPlanRows) { row in
                     WeekPlanDayRow(row: row)
-                        .frame(height: rowHeight, alignment: .topLeading)
+                        .frame(height: rowHeight)
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)
@@ -136,12 +141,17 @@ struct CalendarCard: View {
     private func computedRowHeight(for availableHeight: CGFloat) -> CGFloat {
         let reserved = rowTopPadding + rowBottomPadding + rowSpacing * 6
         let raw = (availableHeight - reserved) / 7
-        return min(max(raw, 82), 124)
+        return max(raw, 82)
     }
 
-    private func eventHint(for date: Date) -> String? {
-        guard let event = eventsOn(date).first else { return nil }
-        return eventSummaryText(for: event, maxTitleLength: 44)
+    private func eventHints(for date: Date) -> (visible: [String], extra: Int) {
+        let events = eventsOn(date)
+        let maxShown = 3
+        let visible = events.prefix(maxShown).map {
+            eventSummaryText(for: $0, maxTitleLength: 44)
+        }
+        let extra = max(0, events.count - maxShown)
+        return (Array(visible), extra)
     }
 
     private func eventsOn(_ date: Date) -> [EKEvent] {
@@ -256,7 +266,8 @@ private struct WeekPlanRowModel: Identifiable {
     let weekday: String
     let dayNumber: String
     let dinner: String?
-    let eventHint: String?
+    let events: [String]
+    let extraEventCount: Int
     let isToday: Bool
     let isPast: Bool
 
@@ -271,12 +282,8 @@ private struct WeekPlanDayRow: View {
         return "\(mealEmoji(for: dinner)) \(dinner)"
     }
 
-    private var hasHint: Bool {
-        row.eventHint != nil
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 9) {
                 Text(row.weekday)
                     .font(.system(size: 12.5, weight: .semibold))
@@ -318,23 +325,34 @@ private struct WeekPlanDayRow: View {
                     .truncationMode(.tail)
             }
 
-            HStack(spacing: 6) {
-                Image(systemName: "calendar")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Theme.muted.opacity(0.8))
-                    .opacity(hasHint ? 1 : 0)
+            if !row.events.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(Array(row.events.enumerated()), id: \.offset) { _, text in
+                        HStack(spacing: 6) {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Theme.muted.opacity(0.8))
 
-                Text(row.eventHint ?? " ")
-                    .font(.system(size: 12.5, weight: .medium))
-                    .foregroundStyle(Theme.muted.opacity(0.9))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .opacity(hasHint ? 1 : 0)
+                            Text(text)
+                                .font(.system(size: 12.5, weight: .medium))
+                                .foregroundStyle(Theme.muted.opacity(0.9))
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
+
+                    if row.extraEventCount > 0 {
+                        Text("+ \(row.extraEventCount) til")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Theme.dimmed)
+                            .padding(.leading, 16)
+                    }
+                }
             }
-            .frame(height: 16, alignment: .leading)
         }
         .padding(.horizontal, Theme.pad - 3)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(
