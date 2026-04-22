@@ -6,7 +6,7 @@ struct StatusBarView: View {
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var weekdayName: String {
-        now.formatted(.dateTime.weekday(.wide).locale(Locale(identifier: "nb_NO"))).uppercased()
+        now.formatted(.dateTime.weekday(.wide).locale(Locale(identifier: "nb_NO"))).capitalized
     }
 
     private var dateString: String {
@@ -16,25 +16,13 @@ struct StatusBarView: View {
         return df.string(from: now)
     }
 
-    private var weekNum: Int {
-        Calendar.current.component(.weekOfYear, from: now)
-    }
-
     var body: some View {
         HStack(spacing: 0) {
-            // Left: weekday + date + Norwegian year
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(weekdayName)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+            // Left: weekday + date
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("\(weekdayName) \(dateString)")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.text)
-
-                Text(dateString)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Theme.text)
-
-                Text("uke \(weekNum)")
-                    .font(.system(size: 17, weight: .medium, design: .rounded))
-                    .foregroundStyle(Theme.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -94,7 +82,7 @@ private struct BothDirections: View {
 
                         Text(dep.destination)
                             .font(.system(size: 14))
-                            .foregroundStyle(stale ? Theme.dimmed : Theme.muted)
+                            .foregroundStyle(stale ? Theme.dimmed : Theme.muted.opacity(0.9))
                             .lineLimit(1)
 
                         Text(dep.minutesText)

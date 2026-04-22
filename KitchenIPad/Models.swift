@@ -105,9 +105,13 @@ let weekdayNamesFull: [Int: String] = [
     5: "Fredag", 6: "Lørdag", 7: "Søndag"
 ]
 
-func currentWeekday() -> Int {
-    let w = Calendar.current.component(.weekday, from: Date())
-    return w == 1 ? 7 : w - 1
+func norwegianWeekdayIndex(for date: Date, calendar: Calendar = .current) -> Int {
+    let weekday = calendar.component(.weekday, from: date)
+    return weekday == 1 ? 7 : weekday - 1
+}
+
+func currentWeekday(from date: Date = Date()) -> Int {
+    norwegianWeekdayIndex(for: date)
 }
 
 // MARK: - Weather helpers

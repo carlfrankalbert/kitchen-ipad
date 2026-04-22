@@ -93,11 +93,22 @@ final class RemindersStore {
         scheduleRefresh()
     }
 
-    func add(title: String) {
+    func add(title: String, dueDate: Date? = nil) {
         guard let cal = reminderCalendar() else { return }
         let reminder = EKReminder(eventStore: store)
         reminder.title    = title
         reminder.calendar = cal
+
+        if let dueDate {
+            var due = Calendar.current.dateComponents([.year, .month, .day], from: dueDate)
+            due.calendar = Calendar.current
+            due.timeZone = TimeZone.current
+            due.hour = 12
+            due.minute = 0
+            due.second = 0
+            reminder.dueDateComponents = due
+        }
+
         try? store.save(reminder, commit: true)
         var updated = items
         updated.append(reminder)
@@ -250,22 +261,24 @@ struct ShoppingCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
-            HStack {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("HANDLELISTE").label()
                 if !remStore.items.isEmpty {
                     Text("\(remStore.items.count)")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Theme.bg)
+                        .frame(minWidth: 18)
                         .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
+                        .padding(.vertical, 1)
                         .background(Theme.accent, in: Capsule())
+                        .offset(y: -0.5)
                 }
                 RemindersRefreshButton(remStore: remStore)
                 Spacer()
             }
             .padding(.horizontal, Theme.pad)
             .padding(.top, Theme.pad)
-            .padding(.bottom, 8)
+            .padding(.bottom, 7)
 
             HLine()
 
@@ -307,7 +320,8 @@ struct ShoppingCard: View {
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.dimmed)
                 .padding(.horizontal, Theme.pad)
-                .padding(.vertical, 10)
+                .padding(.top, 12)
+                .padding(.bottom, 10)
         } else {
             ScrollView {
                 LazyVStack(spacing: 0) {
@@ -323,6 +337,7 @@ struct ShoppingCard: View {
                         HLine().padding(.leading, Theme.pad + 28)
                     }
                 }
+                .padding(.top, 4)
             }
         }
     }
@@ -330,11 +345,17 @@ struct ShoppingCard: View {
     private var addField: some View {
         HStack(spacing: 8) {
             Image(systemName: "plus")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Theme.dimmed)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Theme.muted.opacity(0.88))
 
-            TextField("Legg til vare…", text: $newItem)
-                .font(.system(size: 13))
+            TextField(
+                "",
+                text: $newItem,
+                prompt: Text("Legg til vare…")
+                    .foregroundStyle(Theme.muted.opacity(0.82))
+            )
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.text.opacity(0.96))
                 .focused($fieldFocused)
                 .onSubmit { addItem() }
 
@@ -347,7 +368,7 @@ struct ShoppingCard: View {
             }
         }
         .padding(.horizontal, Theme.pad)
-        .padding(.vertical, 10)
+        .padding(.vertical, 11)
     }
 
     private func addItem() {
@@ -368,18 +389,18 @@ struct CheckRow: View {
         Button(action: onComplete) {
             HStack(spacing: 10) {
                 Image(systemName: "circle")
-                    .font(.system(size: 15))
-                    .foregroundStyle(Theme.dimmed)
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundStyle(Theme.muted.opacity(0.9))
 
                 Text(title)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.text)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Theme.text.opacity(0.97))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
 
                 Spacer()
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 9)
             .padding(.horizontal, Theme.pad)
         }
         .buttonStyle(.plain)

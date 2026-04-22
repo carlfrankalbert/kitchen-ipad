@@ -48,7 +48,7 @@ struct MealEditorSheet: View {
                                 .frame(width: 44)
                                 .font(.system(size: 24))
                                 .multilineTextAlignment(.center)
-                                .onChange(of: name) {
+                                .onChange(of: name) { _, _ in
                                     if emoji.isEmpty {
                                         emoji = mealEmoji(for: name)
                                     }

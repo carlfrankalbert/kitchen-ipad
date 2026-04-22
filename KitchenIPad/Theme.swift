@@ -4,14 +4,14 @@ enum Theme {
     // MARK: - Colors
     static let bg      = Color(hex: 0xD9D2C0)   // warm beige background
     static let text    = Color(hex: 0x1C1917)   // near-black
-    static let muted   = Color(hex: 0x78716C)   // warm gray
-    static let dimmed  = Color(hex: 0xA8A29E)   // light warm gray
+    static let muted   = Color(hex: 0x6E6660)   // warm gray, improved readability
+    static let dimmed  = Color(hex: 0x958E86)   // secondary text
     static let accent  = Color(hex: 0xC2410C)   // today orange
     static let infoBlue = Color(hex: 0x0B5CAD)
     static let infoBlueSoft = Color(hex: 0xDCEBFA)
     static let green   = Color(hex: 0x15803D)
     static let red     = Color(hex: 0xDC2626)
-    static let divider = Color(hex: 0xB5AE9E)   // subtle divider line
+    static let divider = Color(hex: 0xACA495)   // subtle but clearer divider line
 
     // MARK: - Spacing
     static let pad: CGFloat  = 18   // inner card padding
@@ -32,19 +32,19 @@ enum Theme {
 
 extension View {
     func hLine() -> some View {
-        Theme.divider.frame(height: 0.5).frame(maxWidth: .infinity)
+        Theme.divider.frame(height: 0.6).frame(maxWidth: .infinity)
     }
 }
 
 struct VLine: View {
     var body: some View {
-        Theme.divider.frame(width: 0.5).frame(maxHeight: .infinity)
+        Theme.divider.frame(width: 0.6).frame(maxHeight: .infinity)
     }
 }
 
 struct HLine: View {
     var body: some View {
-        Theme.divider.frame(height: 0.5).frame(maxWidth: .infinity)
+        Theme.divider.frame(height: 0.6).frame(maxWidth: .infinity)
     }
 }
 
@@ -54,17 +54,17 @@ extension View {
     /// Small-caps label: 9pt semibold, tracked
     func label() -> some View {
         self
-            .font(.system(size: 9, weight: .semibold))
-            .kerning(1.5)
+            .font(.system(size: 10, weight: .semibold))
+            .kerning(1.8)
             .textCase(.uppercase)
-            .foregroundStyle(Theme.muted)
+            .foregroundStyle(Theme.muted.opacity(0.96))
     }
 
     /// Small-caps label in accent color (for today)
     func accentLabel() -> some View {
         self
-            .font(.system(size: 9, weight: .semibold))
-            .kerning(1.5)
+            .font(.system(size: 10, weight: .semibold))
+            .kerning(1.8)
             .textCase(.uppercase)
             .foregroundStyle(Theme.accent)
     }

@@ -81,42 +81,47 @@ private struct WeatherContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Large temperature + icon + H/L
-            HStack(alignment: .center, spacing: 14) {
-                Image(systemName: weather.current.symbolCode.weatherSFSymbol)
-                    .symbolRenderingMode(.multicolor)
-                    .font(.system(size: 52))
+            HStack(alignment: .top, spacing: 10) {
+                HStack(alignment: .center, spacing: 8) {
+                    Image(systemName: weather.current.symbolCode.weatherSFSymbol)
+                        .symbolRenderingMode(.multicolor)
+                        .font(.system(size: 44))
 
-                Text("\(Int(weather.current.temperature.rounded()))°")
-                    .font(.system(size: 52, weight: .bold, design: .rounded))
-                    .foregroundStyle(stale ? Theme.dimmed : Theme.text)
+                    Text("\(Int(weather.current.temperature.rounded()))°")
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .foregroundStyle(stale ? Theme.dimmed : Theme.text)
+                }
 
-                Spacer()
+                Spacer(minLength: 6)
 
                 if let hl = todayHighLow {
                     VStack(alignment: .trailing, spacing: 3) {
                         Text("↑ \(hl.high)°")
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Theme.infoBlue)
                         Text("↓ \(hl.low)°")
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Theme.infoBlue.opacity(0.78))
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
                     .background(Theme.infoBlueSoft.opacity(0.7), in: Capsule())
+                    .padding(.top, 3)
                 }
             }
             .padding(.horizontal, Theme.pad)
-            .padding(.top, 10)
+            .padding(.top, 6)
             .padding(.bottom, 4)
 
             // Condition + wind sentence
             Text(conditionSentence)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(stale ? Theme.dimmed : Theme.muted)
-                .lineLimit(2)
+                .lineLimit(1)
+                .lineSpacing(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Theme.pad)
-                .padding(.bottom, 8)
+                .padding(.bottom, 7)
 
             HLine()
 
@@ -124,27 +129,27 @@ private struct WeatherContent: View {
             if !clothing.isEmpty {
                 Text("ANTREKK").label()
                     .padding(.horizontal, Theme.pad)
-                    .padding(.top, 6)
-                    .padding(.bottom, 6)
+                    .padding(.top, 5)
+                    .padding(.bottom, 4)
 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         ForEach(clothing) { item in
-                            HStack(spacing: 5) {
+                            HStack(spacing: 3) {
                                 Text(item.emoji)
-                                    .font(.system(size: 28))
+                                    .font(.system(size: 24))
                                 Text(item.label)
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(Theme.text)
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Theme.divider.opacity(0.6), in: Capsule())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Theme.divider.opacity(0.48), in: Capsule())
                         }
                     }
                     .padding(.horizontal, Theme.pad)
                 }
-                .padding(.bottom, 8)
+                .padding(.bottom, 5)
             }
         }
     }
