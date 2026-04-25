@@ -21,6 +21,10 @@
 		'B100000C' = {isa = PBXBuildFile; fileRef = F100000C; };
 		'B100000D' = {isa = PBXBuildFile; fileRef = F100000D; };
 		'B100000E' = {isa = PBXBuildFile; fileRef = F100000E; };
+		'B1000020' = {isa = PBXBuildFile; fileRef = F1000020; };
+		'B1000021' = {isa = PBXBuildFile; fileRef = F1000021; };
+		'B1000022' = {isa = PBXBuildFile; fileRef = F1000022; };
+		'B1000023' = {isa = PBXBuildFile; fileRef = F1000023; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +43,10 @@
 		'F100000D' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoCard.swift; sourceTree = "<group>"; };
 		'F100000E' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingStore.swift; sourceTree = "<group>"; };
 		'F1000010' = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		'F1000020' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarStore.swift; sourceTree = "<group>"; };
+		'F1000021' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FooterStrip.swift; sourceTree = "<group>"; };
+		'F1000022' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySituationCard.swift; sourceTree = "<group>"; };
+		'F1000023' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtilityControls.swift; sourceTree = "<group>"; };
 		'F1000011' = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KitchenIPad.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -69,6 +77,10 @@
 				F100000D,
 				F100000E,
 				F1000010,
+				F1000020,
+				F1000021,
+				F1000022,
+				F1000023,
 			);
 			path = KitchenIPad;
 			sourceTree = "<group>";
@@ -146,6 +158,10 @@
 				B100000C,
 				B100000D,
 				B100000E,
+				B1000020,
+				B1000021,
+				B1000022,
+				B1000023,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

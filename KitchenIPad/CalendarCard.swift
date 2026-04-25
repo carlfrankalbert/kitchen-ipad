@@ -1,45 +1,10 @@
 import SwiftUI
 import EventKit
 
-// MARK: - Calendar store
-
-@Observable
-@MainActor
-final class CalendarStore {
-    var events: [EKEvent] = []
-    var authorized = false
-    var denied = false
-
-    private let store = EKEventStore()
-
-    func requestAccess() async {
-        do {
-            let granted = try await store.requestFullAccessToEvents()
-            authorized = granted
-            denied = !granted
-            if granted { await fetch() }
-        } catch {
-            denied = true
-        }
-    }
-
-    func fetch() async {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        let weekday = cal.component(.weekday, from: today)
-        let fromMon = (weekday + 5) % 7
-        let start = cal.date(byAdding: .day, value: -fromMon, to: today)!
-        let end = cal.date(byAdding: .day, value: 21, to: today)!
-        let pred = store.predicateForEvents(withStart: start, end: end, calendars: nil)
-        let fetched = store.events(matching: pred)
-        events = fetched.sorted { $0.startDate < $1.startDate }
-    }
-}
-
 // MARK: - Weekly planning card
 
 struct CalendarCard: View {
-    @State private var calStore = CalendarStore()
+    let calStore: CalendarStore
     @State private var menuStore = RemindersStore(listNames: ["Ukesmeny", "Ukemeny", "Meny", "Middag", "Middager"])
     @State private var now = Date()
 
@@ -92,32 +57,15 @@ struct CalendarCard: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .task { await calStore.requestAccess() }
         .task { await menuStore.requestAccess() }
         .remindersAutoRefresh(every: 75, remStore: menuStore)
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(300))
-                if calStore.authorized { await calStore.fetch() }
-            }
-        }
         .onReceive(dayTick) { tick in
-            let previous = Calendar.current.startOfDay(for: now)
-            let current = Calendar.current.startOfDay(for: tick)
             now = tick
-
-            guard calStore.authorized else { return }
-            Task {
-                if current != previous { await calStore.fetch() }
-            }
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             now = Date()
-            Task {
-                if calStore.authorized { await calStore.fetch() }
-                await menuStore.refreshNow()
-            }
+            Task { await menuStore.refreshNow() }
         }
     }
 

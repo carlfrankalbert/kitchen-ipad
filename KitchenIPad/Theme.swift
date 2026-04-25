@@ -34,6 +34,22 @@ extension View {
     func hLine() -> some View {
         Theme.divider.frame(height: 0.6).frame(maxWidth: .infinity)
     }
+
+    /// Standard soft-bordered surface used by today's situation lines,
+    /// utility panel buttons, and other small cards.
+    func softCard(corner: CGFloat = 10,
+                  fill: Color,
+                  stroke: Color,
+                  lineWidth: CGFloat = 0.7) -> some View {
+        background(
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(fill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+                        .stroke(stroke, lineWidth: lineWidth)
+                )
+        )
+    }
 }
 
 struct VLine: View {
