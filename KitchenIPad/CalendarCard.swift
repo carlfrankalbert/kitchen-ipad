@@ -45,9 +45,9 @@ struct CalendarCard: View {
 
     @Environment(\.scenePhase) private var scenePhase
     private let dayTick = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
-    private let rowSpacing: CGFloat = 10
-    private let rowTopPadding: CGFloat = 12
-    private let rowBottomPadding: CGFloat = 10
+    private let rowTopPadding: CGFloat = 8
+    private let rowBottomPadding: CGFloat = 8
+    private let dividerThickness: CGFloat = 0.6
 
     private var weekDays: [Date] {
         let cal = Calendar.current
@@ -124,31 +124,38 @@ struct CalendarCard: View {
     private var weekContent: some View {
         GeometryReader { geo in
             let rowHeight = computedRowHeight(for: geo.size.height)
+            let rows = weekPlanRows
 
-            VStack(alignment: .leading, spacing: rowSpacing) {
-                ForEach(weekPlanRows) { row in
+            VStack(spacing: 0) {
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                     WeekPlanDayRow(row: row)
                         .frame(height: rowHeight)
+
+                    if index < rows.count - 1 {
+                        Rectangle()
+                            .fill(Theme.divider.opacity(0.36))
+                            .frame(height: dividerThickness)
+                    }
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)
-            .padding(.horizontal, Theme.pad - 2)
+            .padding(.horizontal, Theme.pad - 4)
             .padding(.top, rowTopPadding)
             .padding(.bottom, rowBottomPadding)
         }
     }
 
     private func computedRowHeight(for availableHeight: CGFloat) -> CGFloat {
-        let reserved = rowTopPadding + rowBottomPadding + rowSpacing * 6
+        let reserved = rowTopPadding + rowBottomPadding + dividerThickness * 6
         let raw = (availableHeight - reserved) / 7
         return max(raw, 82)
     }
 
     private func eventHints(for date: Date) -> (visible: [String], extra: Int) {
         let events = eventsOn(date)
-        let maxShown = 3
+        let maxShown = 4
         let visible = events.prefix(maxShown).map {
-            eventSummaryText(for: $0, maxTitleLength: 44)
+            eventSummaryText(for: $0, maxTitleLength: 60)
         }
         let extra = max(0, events.count - maxShown)
         return (Array(visible), extra)
@@ -283,59 +290,46 @@ private struct WeekPlanDayRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 9) {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(row.weekday)
-                    .font(.system(size: 12.5, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(row.isPast ? Theme.dimmed : Theme.muted.opacity(0.9))
-                    .frame(width: 36, alignment: .leading)
 
                 Text(row.dayNumber)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(row.isPast ? Theme.dimmed : Theme.text.opacity(0.95))
-                    .frame(width: 26, alignment: .leading)
 
                 if row.isToday {
                     Text("I DAG")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 8.5, weight: .semibold))
                         .kerning(1.0)
                         .foregroundStyle(Theme.text.opacity(0.78))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2.5)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
                         .background(
                             Capsule()
-                                .fill(Theme.divider.opacity(0.26))
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Theme.divider.opacity(0.52), lineWidth: 0.7)
-                                )
+                                .fill(Theme.divider.opacity(0.32))
                         )
+                        .padding(.top, 1)
                 }
-
-                Spacer(minLength: 0)
-
-                Text(dinnerText)
-                    .font(.system(size: 13.5, weight: .medium))
-                    .foregroundStyle(
-                        row.isPast
-                            ? Theme.dimmed
-                            : Theme.muted.opacity(0.86)
-                    )
-                    .lineLimit(1)
-                    .truncationMode(.tail)
             }
+            .frame(width: 50, alignment: .leading)
+            .padding(.top, 2)
 
-            if !row.events.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2.5) {
+                if !row.events.isEmpty {
                     ForEach(Array(row.events.enumerated()), id: \.offset) { _, text in
-                        HStack(spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Image(systemName: "calendar")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(.system(size: 9.5, weight: .semibold))
                                 .foregroundStyle(Theme.muted.opacity(0.8))
 
                             Text(text)
-                                .font(.system(size: 12.5, weight: .medium))
-                                .foregroundStyle(Theme.muted.opacity(0.9))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(
+                                    row.isPast ? Theme.dimmed : Theme.text.opacity(0.92)
+                                )
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
@@ -343,31 +337,34 @@ private struct WeekPlanDayRow: View {
 
                     if row.extraEventCount > 0 {
                         Text("+ \(row.extraEventCount) til")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 10.5, weight: .semibold))
                             .foregroundStyle(Theme.dimmed)
                             .padding(.leading, 16)
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .padding(.top, 4)
+
+            Text(dinnerText)
+                .font(.system(size: 12.5, weight: .medium))
+                .foregroundStyle(
+                    row.isPast ? Theme.dimmed : Theme.muted.opacity(0.88)
+                )
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(width: 180, alignment: .trailing)
+                .padding(.top, 4)
         }
-        .padding(.horizontal, Theme.pad - 3)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(
-                    row.isToday
-                        ? Theme.divider.opacity(0.2)
-                        : Theme.divider.opacity(row.isPast ? 0.08 : 0.13)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(
-                            row.isToday ? Theme.divider.opacity(0.56) : Color.clear,
-                            lineWidth: 0.75
-                        )
-                )
+            row.isToday
+                ? Theme.divider.opacity(0.18)
+                : Color.clear
         )
+        .clipped()
     }
 }
 

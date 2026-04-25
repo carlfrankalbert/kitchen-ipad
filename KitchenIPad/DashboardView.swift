@@ -83,11 +83,11 @@ struct DashboardView: View {
     }
 
     private func todayColumnWidth(_ geo: GeometryProxy) -> CGFloat {
-        geo.size.width * 0.58
+        geo.size.width * 0.32
     }
 
     private func utilityControlsHeight(_ geo: GeometryProxy) -> CGFloat {
-        min(max(112, geo.size.height * 0.14), 148)
+        min(max(140, geo.size.height * 0.18), 180)
     }
 }
 
@@ -366,6 +366,7 @@ private struct TodaySituationCard: View {
             .sorted { $0.startDate < $1.startDate }
     }
 
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let weather = api.weather {
@@ -458,6 +459,7 @@ private struct TodaySituationCard: View {
                         value: specialTodayText
                     )
                 }
+
             }
             .padding(.horizontal, Theme.pad)
             .padding(.top, 11)
@@ -683,29 +685,20 @@ private struct UtilityCornerControls: View {
     @State private var activeSheet: UtilityListKind?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 8) {
-                UtilityPanelCard(
-                    title: "Handleliste",
-                    count: shoppingStore.items.count,
-                    itemSingular: "vare",
-                    itemPlural: "varer",
-                    accent: Theme.accent,
-                    onOpen: { activeSheet = .shopping }
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        VStack(alignment: .leading, spacing: 8) {
+            UtilityPanelCard(
+                title: "Handleliste",
+                icon: "cart",
+                accent: Theme.accent,
+                onOpen: { activeSheet = .shopping }
+            )
 
-                UtilityPanelCard(
-                    title: "Gjøremål",
-                    count: todoStore.items.count,
-                    itemSingular: "oppgave",
-                    itemPlural: "oppgaver",
-                    accent: Theme.green,
-                    onOpen: { activeSheet = .todo }
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            UtilityPanelCard(
+                title: "Gjøremål",
+                icon: "checklist",
+                accent: Theme.green,
+                onOpen: { activeSheet = .todo }
+            )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task {
@@ -757,42 +750,31 @@ private enum UtilityListKind: String, Identifiable {
 
 private struct UtilityPanelCard: View {
     let title: String
-    let count: Int
-    let itemSingular: String
-    let itemPlural: String
+    let icon: String
     let accent: Color
     let onOpen: () -> Void
 
-    private var summaryText: String {
-        guard count > 0 else { return "Tom liste · legg til med +" }
-        let noun = count == 1 ? itemSingular : itemPlural
-        return "\(count) \(noun) i listen"
-    }
-
     var body: some View {
         Button(action: onOpen) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .center, spacing: 8) {
-                    Text(title)
-                        .font(.system(size: 10.5, weight: .semibold))
-                        .kerning(1.2)
-                        .foregroundStyle(Theme.muted.opacity(0.92))
+            HStack(alignment: .center, spacing: 11) {
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 26, alignment: .center)
 
-                    Spacer(minLength: 0)
-
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 25, weight: .semibold))
-                        .foregroundStyle(accent)
-                }
-
-                Text(summaryText)
-                    .font(.system(size: 13.5, weight: .medium, design: .rounded))
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.text.opacity(0.94))
-                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(accent)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(Theme.divider.opacity(0.16))
